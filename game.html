@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Podium · Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <main class="screen game">
+        <div class="left">
+            <div>
+                <h2 id="gtitle"></h2>
+                <div class="score"><span class="chip" id="timer"></span><span id="gscore" class="score"></span></div>
+            </div>
+            <div class="grid" id="grid"></div>
+            <div class="hints" id="hints"></div>
+        </div>
+        <div class="right">
+            <div class="chat" id="chat"></div>
+            <div class="row"><input id="msg" maxlength="100" autocomplete="off"><button id="send">Send</button></div>
+            <div class="row">
+                <button id="hint" class="alt"></button>
+                <button id="giveup" class="bad">Give up</button>
+            </div>
+        </div>
+    </main>
+    <div id="toast" hidden></div>
+    <script type="module" src="js/game.js"></script>
+</body>
+
+</html>

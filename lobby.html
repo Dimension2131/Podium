@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Podium · Lobby</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <main class="screen">
+        <div class="card">
+            <p class="mute">Room code</p>
+            <div class="code" id="lcode"></div>
+            <p id="ltopic"></p>
+            <ul class="plist" id="lplayers"></ul>
+            <p class="mute" id="lnote"></p>
+            <div class="row"><button id="start" hidden>Start game</button><button id="leave" class="alt">Leave</button>
+            </div>
+        </div>
+    </main>
+    <div id="toast" hidden></div>
+    <script type="module" src="js/lobby.js"></script>
+</body>
+
+</html>

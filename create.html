@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Podium · Create a list</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <main class="screen">
+        <div class="card wide">
+            <h1>Create a list</h1>
+            <p class="mute">Lists are shared, so anyone can find and play yours. Saved lists can't be edited, so check
+                the order first.</p>
+            <label for="title">Title</label>
+            <input id="title" maxlength="40" placeholder="Top footballers of all time">
+            <label for="size">Number of entries</label>
+            <select id="size">
+                <option>5</option>
+                <option selected>10</option>
+                <option>15</option>
+                <option>20</option>
+            </select>
+            <label for="entries">Entries, best first (one per line)</label>
+            <textarea id="entries"
+                placeholder="Lionel Messi | messi, leo&#10;Cristiano Ronaldo | ronaldo, cr7&#10;Pelé"></textarea>
+            <p class="count mute" id="count"></p>
+            <p class="mute">Line 1 is rank #1. Add accepted spellings after a | separated by commas.</p>
+            <div class="row"><button id="save">Save and play</button><a class="btn alt" href="index.html"
+                    style="border-color:var(--line-strong);color:var(--ink)">Cancel</a></div>
+        </div>
+    </main>
+    <div id="toast" hidden></div>
+    <script type="module" src="js/create.js"></script>
+</body>
+
+</html>

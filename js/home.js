@@ -7,7 +7,45 @@ let seq = 0;
 let tm;
 let busy = false;
 let warned = false;
+let view = null;
+let viewSrc = null;
+let viewLen = -1;
+let viewHid = "";
 $("#name").value = getName();
+
+const hiddenIds = () => {
+    try {
+        return new Set(JSON.parse(localStorage.getItem("podium_hidden") || "[]"));
+    }
+    catch (e) {
+        return new Set();
+    }
+};
+
+function visibleLib(lib) {
+    const hid = hiddenIds();
+    const sig = [...hid].join(",");
+    if (view && viewSrc === lib && viewLen === lib.length && viewHid === sig) {
+        return view;
+    }
+    view = lib.filter(l => !hid.has(l.id));
+    viewSrc = lib;
+    viewLen = lib.length;
+    viewHid = sig;
+    return view;
+}
+
+function hideList(id) {
+    const hid = hiddenIds();
+    hid.add(id);
+    try {
+        localStorage.setItem("podium_hidden", JSON.stringify([...hid].slice(-500)));
+    }
+    catch (e) {
+        console.warn("Could not remember hidden lists:", e);
+    }
+    search();
+}
 
 const recent = () => {
     try {
@@ -265,12 +303,13 @@ async function search() {
     if (my !== seq) {
         return;
     }
+    lib = visibleLib(lib);
     fillSaved(lib);
     const hits = lib.filter(l => {
         const h = hay(l);
         return words.every(w => h.includes(stem(w)));
     }).slice(0, 6);
-    let h = hits.map(l => `<li><span>${esc(l.title)} <small>top ${l.size} · ${esc(l.by)}</small></span><button class="alt" data-id="${l.id}">Use</button></li>`).join("");
+    let h = hits.map(l => `<li><span>${esc(l.title)} <small>top ${l.size} · ${esc(l.by)}</small></span><span class="acts"><button class="alt" data-id="${l.id}">Use</button> <button class="alt" data-hide="${l.id}" aria-label="Hide this list" title="Hide this list">×</button></span></li>`).join("");
     if (raw.length >= 3) {
         h += `<li><span class="mute">${hits.length ? "None of these? " : ""}Generate "${esc(raw)}" with AI</span><span>${[5, 10, 15, 20].map(n => `<button class="alt" data-gen="${n}">Top ${n}</button>`).join(" ")}</span></li>`;
     }
@@ -305,6 +344,10 @@ $("#results").onclick = async (e) => {
             search();
         }
         busy = false;
+        return;
+    }
+    if (b.dataset.hide) {
+        hideList(b.dataset.hide);
         return;
     }
     const l = (cache || []).find(x => x.id === b.dataset.id);

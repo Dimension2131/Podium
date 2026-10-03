@@ -1,5 +1,5 @@
 import { db, ref, onValue } from "./firebase.js";
-import { $, esc, code, pid, sorted } from "./common.js";
+import { $, esc, code, sorted, isPlayer, isWatcher } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -7,7 +7,7 @@ if (!code) {
 
 onValue(ref(db, "rooms/" + code), s => {
     const room = s.val();
-    if (!room || !room.players || !room.players[pid]) {
+    if (!room || !room.players || !(isPlayer(room) || isWatcher(room))) {
         location.href = "index.html";
         return;
     }

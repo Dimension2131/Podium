@@ -1,5 +1,5 @@
 import { db, ref, push, runTransaction, onValue, onChildAdded, query, limitToLast } from "./firebase.js";
-import { $, esc, code, pid, toast, match, settle, sorted, presence, pointsFor, hintRules } from "./common.js";
+import { $, esc, code, pid, toast, match, settle, sorted, presence, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -30,7 +30,7 @@ const end = () => runTransaction(roomRef, r => {
 
 onValue(roomRef, s => {
     room = s.val();
-    if (!room || !room.players || !room.players[pid]) {
+    if (!room || !room.players || !(isPlayer(room) || isWatcher(room))) {
         location.href = "index.html";
         return;
     }
@@ -44,7 +44,7 @@ onValue(roomRef, s => {
     }
     if (!live) {
         live = true;
-        presence();
+        presence(isWatcher(room));
     }
     render();
     check();
@@ -61,8 +61,14 @@ onChildAdded(query(chatRef, limitToLast(100)), s => {
         p.append(document.createTextNode(v.t));
     }
     const c = $("#chat");
+    const stick = c.scrollHeight - c.scrollTop - c.clientHeight < 60;
     c.append(p);
-    c.scrollTop = c.scrollHeight;
+    while (c.children.length > 100) {
+        c.firstChild.remove();
+    }
+    if (stick) {
+        c.scrollTop = c.scrollHeight;
+    }
 });
 
 function check() {
@@ -87,10 +93,11 @@ setInterval(() => {
 }, 1000);
 
 function render() {
-    const me = room.players[pid];
-    const spec = !me.active;
+    const me = who(room);
+    const watcher = !isPlayer(room);
+    const spec = !watcher && !me.active;
     const rev = room.revealed || {};
-    $("#gtitle").textContent = `${room.topic}, top ${room.size}${spec ? " (spectating)" : ""}`;
+    $("#gtitle").textContent = `${room.topic}, top ${room.size}${watcher || spec ? " (spectating)" : ""}`;
     $("#gscore").innerHTML = sorted(room).map(p => `<span class="chip${p.active ? "" : " out"}${p.id === pid ? " me" : ""}">${esc(p.name)} ${p.score}</span>`).join("");
     let h = "";
     for (let r = 1; r <= room.size; r++) {
@@ -110,9 +117,9 @@ function render() {
     const hr = hintRules(room);
     $("#hint").hidden = hr.max === 0;
     $("#hint").textContent = `Hint (${Math.max(0, hr.max - (me.hints || 0))} left${hr.cost ? `, -${hr.cost} pt${hr.cost > 1 ? "s" : ""}` : ", free"})`;
-    $("#hint").disabled = spec || (me.hints || 0) >= hr.max;
-    $("#giveup").disabled = spec;
-    $("#msg").placeholder = spec ? "Chat with other players" : "Type a name to guess it";
+    $("#hint").disabled = watcher || spec || (me.hints || 0) >= hr.max;
+    $("#giveup").disabled = watcher || spec;
+    $("#msg").placeholder = watcher ? "Chat, or type a name to test a guess (no points)" : spec ? "Chat with other players" : "Type a name to guess it";
 }
 
 async function send() {
@@ -121,9 +128,15 @@ async function send() {
     if (!t || !room) {
         return;
     }
-    const me = room.players[pid];
+    const me = who(room);
+    if (!me) {
+        return;
+    }
     const i = match(t, room.items);
     if (i >= 0) {
+        if (!isPlayer(room)) {
+            return toast((room.revealed || {})["r" + (i + 1)] ? "Already guessed" : "Correct, but spectators don't score");
+        }
         if (!me.active) {
             return toast("Spectators can't reveal answers");
         }
@@ -176,7 +189,7 @@ $("#msg").onkeydown = e => {
 
 $("#hint").onclick = async () => {
     const me = room.players[pid];
-    if (!me.active || (me.hints || 0) >= hintRules(room).max) {
+    if (!me || !me.active || (me.hints || 0) >= hintRules(room).max) {
         return;
     }
     const rev = room.revealed || {};
@@ -217,6 +230,9 @@ $("#hint").onclick = async () => {
 
 $("#giveup").onclick = async () => {
     if (!confirm("Give up? You will reveal every answer and become a spectator.")) {
+        return;
+    }
+    if (!isPlayer(room)) {
         return;
     }
     const name = room.players[pid].name;

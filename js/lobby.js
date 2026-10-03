@@ -1,5 +1,5 @@
-import { db, ref, runTransaction, onValue } from "./firebase.js";
-import { $, esc, code, pid, toast, sorted, presence, sweep, PMODES, pointsFor, hintRules } from "./common.js";
+import { db, ref, runTransaction, onValue, remove, onDisconnect } from "./firebase.js";
+import { $, esc, code, pid, toast, sorted, presence, sweep, PMODES, pointsFor, hintRules, isWatcher, watchers } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -8,6 +8,7 @@ if (!code) {
 const roomRef = ref(db, "rooms/" + code);
 let live = false;
 let room = null;
+let pres = null;
 
 const drop = (id, force) => runTransaction(roomRef, r => {
     if (r === null) {
@@ -30,7 +31,8 @@ const drop = (id, force) => runTransaction(roomRef, r => {
 
 onValue(roomRef, s => {
     room = s.val();
-    if (!room || !room.players || !room.players[pid]) {
+    const watching = isWatcher(room);
+    if (!room || !room.players || (!room.players[pid] && !watching)) {
         location.href = "index.html";
         return;
     }
@@ -44,7 +46,7 @@ onValue(roomRef, s => {
     }
     if (!live) {
         live = true;
-        presence();
+        pres = presence(watching);
     }
     const list = sorted(room);
     const host = room.host === pid;
@@ -54,9 +56,13 @@ onValue(roomRef, s => {
     const pl = Array.from({ length: room.size }, (_, i) => pointsFor(room, i + 1)).join(", ");
     $("#ltopic").innerHTML = `${esc(room.topic)}, top ${room.size}<br><small class="mute">${mins} min · ${esc(PMODES[room.pmode] || "Top ranks most")} points · hints: ${hr.max ? hr.max + " each, " + (hr.cost ? "-" + hr.cost + " pts" : "free") : "off"}</small><br><small class="mute">Points by rank: ${pl}</small>`;
     $("#lplayers").innerHTML = list.map(p => `<li><span>${esc(p.name)}${p.id === room.host ? " (host)" : ""}</span><span class="mute">${p.online === false ? "away" : ""}</span></li>`).join("");
+    const ws = watchers(room);
+    if (ws.length) {
+        $("#lplayers").innerHTML += `<li><span class="mute">Spectating: ${ws.map(w => esc(w.name)).join(", ")}</span></li>`;
+    }
     $("#start").hidden = !host;
     $("#start").disabled = list.length < 2;
-    $("#lnote").textContent = list.length < 2 ? `Waiting for players (${list.length}/10). You need at least 2 to start.` : host ? `${list.length}/10 players ready.` : "Waiting for the host to start.";
+    $("#lnote").textContent = watching ? "You are spectating. The game opens for you when the host starts it." : list.length < 2 ? `Waiting for players (${list.length}/10). You need at least 2 to start.` : host ? `${list.length}/10 players ready.` : "Waiting for the host to start.";
     sweep(room, id => drop(id, false));
 });
 
@@ -79,6 +85,14 @@ $("#start").onclick = () => runTransaction(roomRef, r => {
 });
 
 $("#leave").onclick = async () => {
+    if (isWatcher(room)) {
+        if (pres) {
+            await onDisconnect(pres).cancel();
+        }
+        await remove(ref(db, `rooms/${code}/spectators/${pid}`));
+        location.href = "index.html";
+        return;
+    }
     await drop(pid, true);
     location.href = "index.html";
 };

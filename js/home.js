@@ -464,6 +464,28 @@ $("#create").onclick = async () => {
     toast("Could not create a room, try again");
 };
 
+const dest = r => (r.status === "lobby" ? "lobby" : r.status === "playing" ? "game" : "results") + ".html?room=";
+
+async function watch(c, n) {
+    const res = await runTransaction(ref(db, `rooms/${c}/spectators`), p => {
+        p = p || {};
+        if (p[pid]) {
+            p[pid].name = n;
+            p[pid].online = true;
+            return p;
+        }
+        if (Object.keys(p).length >= 30) {
+            return;
+        }
+        p[pid] = {
+            name: n,
+            online: true
+        };
+        return p;
+    });
+    return res.committed;
+}
+
 $("#join").onclick = async () => {
     const n = name();
     if (!n) {
@@ -484,5 +506,24 @@ $("#join").onclick = async () => {
     if (!mine && !(await add(c, n))) {
         return toast("Room is full");
     }
-    location.href = (r.status === "lobby" ? "lobby" : r.status === "playing" ? "game" : "results") + ".html?room=" + c;
+    location.href = dest(r) + c;
+};
+
+$("#spectate").onclick = async () => {
+    const n = name();
+    if (!n) {
+        return;
+    }
+    const c = $("#joincode").value.trim().toUpperCase();
+    if (c.length !== 4) {
+        return toast("Room codes have 4 letters");
+    }
+    const r = (await get(ref(db, "rooms/" + c))).val();
+    if (!r) {
+        return toast("Room not found");
+    }
+    if (!(r.players && r.players[pid]) && !(await watch(c, n))) {
+        return toast("Too many spectators in that room");
+    }
+    location.href = dest(r) + c;
 };

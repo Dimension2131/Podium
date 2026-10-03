@@ -107,14 +107,20 @@ export const sorted = r => Object.entries(r.players).map(([id, p]) => ({
     ...p
 })).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
-export function presence() {
-    const on = ref(db, `rooms/${code}/players/${pid}/online`);
+export const isPlayer = r => !!(r && r.players && r.players[pid]);
+export const isWatcher = r => !isPlayer(r) && !!(r && r.spectators && r.spectators[pid]);
+export const me = r => isPlayer(r) ? r.players[pid] : isWatcher(r) ? r.spectators[pid] : null;
+export const watchers = r => Object.values((r && r.spectators) || {}).filter(s => s && s.name && s.online !== false);
+
+export function presence(spec) {
+    const on = ref(db, `rooms/${code}/${spec ? "spectators" : "players"}/${pid}/online`);
     onValue(ref(db, ".info/connected"), s => {
         if (s.val()) {
             onDisconnect(on).set(false);
             set(on, true);
         }
     });
+    return on;
 }
 
 const since = {};

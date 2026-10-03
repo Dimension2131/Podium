@@ -380,8 +380,12 @@ a {
 .game {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(300px, .8fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 1rem;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
     padding: 1rem;
 }
 
@@ -391,6 +395,12 @@ a {
     flex-direction: column;
     gap: .8rem;
     min-height: 0;
+}
+
+.left {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 92, 246, .3) transparent;
 }
 
 .left>*,
@@ -559,7 +569,8 @@ a {
 .chat {
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: .75rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -803,12 +814,22 @@ dialog button {
 @media (max-width: 800px) {
     .game {
         grid-template-columns: 1fr;
+        grid-template-rows: none;
+        height: auto;
         min-height: 100vh;
+        min-height: 100dvh;
+        overflow: visible;
         padding: .75rem;
     }
 
+    .left {
+        overflow: visible;
+    }
+
     .chat {
-        min-height: 260px;
+        flex: none;
+        height: clamp(200px, 34vh, 320px);
+        overscroll-behavior: contain;
     }
 
     .grid {

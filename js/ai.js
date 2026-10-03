@@ -43,8 +43,9 @@ async function candidates() {
         gem = GEMINI_MODELS;
     }
     const gemma = names.filter(n => /^gemma-.*-it$/.test(n)).sort();
+    const old25 = names.filter(n => /^gemini-2\.5-flash(-lite)?$/.test(n)).sort((a, b) => /lite/.test(a) - /lite/.test(b));
     cached = {
-        search: gem,
+        search: [...old25, ...gem],
         plain: [...gem, ...gemma]
     };
     console.log("Gemini models to try:", cached);
@@ -74,6 +75,7 @@ async function run(models, prompt, search) {
     const order = g && models.includes(g) ? [g, ...models.filter(m => m !== g)] : models;
     let last = null;
     let quota = false;
+    let searchFails = 0;
     for (const model of order) {
         if ((cool[model + mode] || 0) > Date.now()) {
             quota = true;
@@ -96,6 +98,9 @@ async function run(models, prompt, search) {
         } else if (s === 429) {
             quota = true;
             cool[model + mode] = Date.now() + 60000;
+            if (search && ++searchFails >= 2) {
+                break;
+            }
         } else if (s === 500 || s === 503) {
             cool[model + mode] = Date.now() + 10000;
         }

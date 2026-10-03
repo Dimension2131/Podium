@@ -43,9 +43,8 @@ async function candidates() {
         gem = GEMINI_MODELS;
     }
     const gemma = names.filter(n => /^gemma-.*-it$/.test(n)).sort();
-    const old25 = names.filter(n => /^gemini-2\.5-flash(-lite)?$/.test(n)).sort((a, b) => /lite/.test(a) - /lite/.test(b));
     cached = {
-        search: [...old25, ...gem],
+        search: gem,
         plain: [...gem, ...gemma]
     };
     console.log("Gemini models to try:", cached);
@@ -123,7 +122,7 @@ async function run(models, prompt, search) {
     };
 }
 
-const mk = (topic, size, search) => `${search ? `Find the most widely cited ranking for: "${topic}". Use current web sources.` : `Give the most widely cited ranking you know for: "${topic}".`} Return exactly ${size} entries, rank 1 first. Reply with JSON only, no markdown, in this shape: {"title":"short list title under 40 characters","items":[{"n":"Name","a":["alternate spelling or nickname"]}]}. Each n is a short name under 60 characters with no rank numbers or notes, with no duplicates. a is optional and holds at most 3 short alternates.`;
+const mk = (topic, size, search) => `${search ? `Find the most widely cited ranking for: "${topic}". Use current web sources.` : `Give the most widely cited ranking you know for: "${topic}".`} The ranking must cover the whole topic as worded: do not narrow it by gender, era, country, genre or publisher unless the topic itself says so. If no single published ranking covers it, give your best overall all-time ranking. Return exactly ${size} entries, rank 1 first. Reply with JSON only, no markdown, in this shape: {"title":"short list title under 40 characters","items":[{"n":"Name","a":["alternate spelling or nickname"]}]}. Each n is a short name under 60 characters with no rank numbers or notes, with no duplicates. a is optional and holds at most 3 short alternates.`;
 
 export async function generate(topic, size) {
     const m = await candidates();

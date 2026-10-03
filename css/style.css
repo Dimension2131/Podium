@@ -783,6 +783,8 @@ dialog button {
 
 .results button {
     padding: .4rem .8rem;
+    flex: none;
+    white-space: nowrap;
 }
 
 .count {

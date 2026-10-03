@@ -303,9 +303,9 @@ async function search() {
     if (my !== seq) {
         return;
     }
-    lib = visibleLib(lib);
     fillSaved(lib);
-    const hits = lib.filter(l => {
+    const shown = visibleLib(lib);
+    const hits = shown.filter(l => {
         const h = hay(l);
         return words.every(w => h.includes(stem(w)));
     }).slice(0, 6);

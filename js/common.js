@@ -114,13 +114,45 @@ export const watchers = r => Object.values((r && r.spectators) || {}).filter(s =
 
 export function presence(spec) {
     const on = ref(db, `rooms/${code}/${spec ? "spectators" : "players"}/${pid}/online`);
+    const up = () => {
+        if (!document.hidden) {
+            set(on, true).catch(() => { });
+        }
+    };
     onValue(ref(db, ".info/connected"), s => {
         if (s.val()) {
             onDisconnect(on).set(false);
-            set(on, true);
+            set(on, true).catch(() => { });
         }
     });
+    setInterval(up, 8000);
+    document.addEventListener("visibilitychange", up);
     return on;
+}
+
+export function setHtml(el, html) {
+    if (el._h !== html) {
+        el.innerHTML = html;
+        el._h = html;
+    }
+}
+
+export function patch(el, htmls) {
+    const c = el._c || [];
+    if (c.length !== htmls.length || el.children.length !== htmls.length) {
+        el.innerHTML = htmls.join("");
+        el._c = htmls.slice();
+        return;
+    }
+    htmls.forEach((h, i) => {
+        if (c[i] !== h) {
+            const t = document.createElement("template");
+            t.innerHTML = h;
+            el.children[i].replaceWith(t.content.firstElementChild);
+            c[i] = h;
+        }
+    });
+    el._c = c;
 }
 
 const since = {};
@@ -131,7 +163,7 @@ export function sweep(room, fn) {
             if (!since[id]) {
                 since[id] = Date.now();
             }
-            if (Date.now() - since[id] > 15000) {
+            if (Date.now() - since[id] > 45000) {
                 fn(id);
             }
         } else {

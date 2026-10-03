@@ -1,5 +1,5 @@
 import { db, ref, push, runTransaction, onValue, onChildAdded, query, limitToLast } from "./firebase.js";
-import { $, esc, code, pid, toast, match, settle, sorted, presence, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
+import { $, esc, code, pid, toast, match, settle, sorted, presence, setHtml, patch, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -98,22 +98,22 @@ function render() {
     const spec = !watcher && !me.active;
     const rev = room.revealed || {};
     $("#gtitle").textContent = `${room.topic}, top ${room.size}${watcher || spec ? " (spectating)" : ""}`;
-    $("#gscore").innerHTML = sorted(room).map(p => `<span class="chip${p.active ? "" : " out"}${p.id === pid ? " me" : ""}">${esc(p.name)} ${p.score}</span>`).join("");
-    let h = "";
+    setHtml($("#gscore"), sorted(room).map(p => `<span class="chip${p.active ? "" : " out"}${p.id === pid ? " me" : ""}">${esc(p.name)} ${p.score}</span>`).join(""));
+    const h = [];
     for (let r = 1; r <= room.size; r++) {
         const it = room.items[r - 1];
         const by = rev["r" + r];
         const pts = pointsFor(room, r);
         if (by) {
-            h += `<div class="box open"><b>#${r} · ${pts} pts</b><span>${esc(it.n)}</span><small>${esc(room.players[by] ? room.players[by].name : "")}</small></div>`;
+            h.push(`<div class="box open"><b>#${r} · ${pts} pts</b><span>${esc(it.n)}</span><small>${esc(room.players[by] ? room.players[by].name : "")}</small></div>`);
         } else if (spec) {
-            h += `<div class="box ghost"><b>#${r}</b><span>${esc(it.n)}</span></div>`;
+            h.push(`<div class="box ghost"><b>#${r}</b><span>${esc(it.n)}</span></div>`);
         } else {
-            h += `<div class="box lock"><b>#${r} · ${pts} pts</b><span>?</span></div>`;
+            h.push(`<div class="box lock"><b>#${r} · ${pts} pts</b><span>?</span></div>`);
         }
     }
-    $("#grid").innerHTML = h;
-    $("#hints").innerHTML = hintLog.map(x => `<div>${esc(x)}</div>`).join("");
+    patch($("#grid"), h);
+    setHtml($("#hints"), hintLog.map(x => `<div>${esc(x)}</div>`).join(""));
     const hr = hintRules(room);
     $("#hint").hidden = hr.max === 0;
     $("#hint").textContent = `Hint (${Math.max(0, hr.max - (me.hints || 0))} left${hr.cost ? `, -${hr.cost} pt${hr.cost > 1 ? "s" : ""}` : ", free"})`;

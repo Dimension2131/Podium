@@ -20,13 +20,10 @@
                 <button id="browse" class="alt">Browse saved lists</button>
                 <label for="q">Or create a new list with AI</label>
                 <div class="crow"><input id="q" maxlength="40" autocomplete="off"
-                        placeholder="Try: top footballers"><select id="gsize"
-                        aria-label="List size">
-                        <option value="5">Top 5</option>
-                        <option value="10" selected>Top 10</option>
-                        <option value="15">Top 15</option>
-                        <option value="20">Top 20</option>
-                    </select><button id="qgo">Create</button></div>
+                        placeholder="Try: top footballers"><button id="qgo">Create</button></div>
+                <div class="seg" id="gsize" data-v="10" aria-label="List size"><button class="alt" data-v="5">Top 5</button><button
+                        class="alt on" data-v="10">Top 10</button><button class="alt" data-v="15">Top 15</button><button
+                        class="alt" data-v="20">Top 20</button></div>
                 <ul class="plist results" id="results"></ul>
                 <p class="mute" id="hidnote" hidden><a href="#" id="showhid"></a></p>
                 <div id="recent"></div>
@@ -84,10 +81,8 @@
                         data-z="15">Top 15</button><button class="alt" data-z="20">Top 20</button></div>
                 <div class="seg" id="pksrc"><button class="alt on" data-s="all">All sources</button><button class="alt"
                         data-s="ai">AI</button><button class="alt" data-s="pl">Players</button></div>
-                <select id="pksort" aria-label="Sort">
-                    <option value="new">Newest first</option>
-                    <option value="az">A to Z</option>
-                </select>
+                <div class="seg" id="pksort" data-v="new" aria-label="Sort"><button class="alt on" data-v="new">Newest</button><button
+                        class="alt" data-v="az">A to Z</button></div>
             </div>
             <div class="pkmeta"><span class="mute" id="pkcount"></span><button id="pkclear" class="alt"
                     hidden>Clear filters</button></div>

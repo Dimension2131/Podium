@@ -297,7 +297,7 @@ async function search() {
     }
     const my = ++seq;
     const raw = $("#q").value.trim();
-    const size = +$("#gsize").value;
+    const size = +$("#gsize").dataset.v;
     const lib = await getLib();
     if (my !== seq) {
         return;
@@ -344,7 +344,7 @@ async function create(force) {
         return;
     }
     const topic = $("#q").value.trim();
-    const size = +$("#gsize").value;
+    const size = +$("#gsize").dataset.v;
     if (topic.length < 3) {
         return toast("Type at least 3 characters for the list title");
     }
@@ -415,7 +415,17 @@ $("#q").oninput = () => {
     tm = setTimeout(search, 150);
 };
 
-$("#gsize").onchange = search;
+$("#gsize").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b) {
+        return;
+    }
+    $("#gsize").dataset.v = b.dataset.v;
+    for (const x of $("#gsize").children) {
+        x.classList.toggle("on", x === b);
+    }
+    search();
+};
 
 const pk = {
     q: "",
@@ -444,7 +454,10 @@ function pkSync() {
         b.classList.toggle("on", b.dataset.s === pk.src);
     }
     $("#pkq").value = pk.q;
-    $("#pksort").value = pk.sort;
+    $("#pksort").dataset.v = pk.sort;
+    for (const b of $("#pksort").children) {
+        b.classList.toggle("on", b.dataset.v === pk.sort);
+    }
 }
 
 function pkChange() {
@@ -527,8 +540,12 @@ $("#pksrc").onclick = e => {
     }
 };
 
-$("#pksort").onchange = () => {
-    pk.sort = $("#pksort").value;
+$("#pksort").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b) {
+        return;
+    }
+    pk.sort = b.dataset.v;
     pkChange();
 };
 

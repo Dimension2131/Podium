@@ -18,12 +18,9 @@
             <label for="title">Title</label>
             <input id="title" maxlength="40" placeholder="Top footballers of all time">
             <label for="size">Number of entries</label>
-            <select id="size">
-                <option>5</option>
-                <option selected>10</option>
-                <option>15</option>
-                <option>20</option>
-            </select>
+            <div class="seg" id="size" data-v="10"><button class="alt" data-v="5">5</button><button class="alt on"
+                    data-v="10">10</button><button class="alt" data-v="15">15</button><button class="alt"
+                    data-v="20">20</button></div>
             <label for="entries">Entries, best first (one per line)</label>
             <textarea id="entries"
                 placeholder="Lionel Messi | messi, leo&#10;Cristiano Ronaldo | ronaldo, cr7&#10;Pelé"></textarea>

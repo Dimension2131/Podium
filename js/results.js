@@ -5,16 +5,27 @@ if (!code) {
     location.href = "index.html";
 }
 
+let latest = "";
+let bounce = 0;
+
 onValue(ref(db, "rooms/" + code), s => {
     const room = s.val();
     if (!room || !room.players || !(isPlayer(room) || isWatcher(room))) {
         location.href = "index.html";
         return;
     }
+    latest = room.status;
     if (room.status !== "ended") {
-        location.href = (room.status === "lobby" ? "lobby" : "game") + ".html?room=" + code;
+        clearTimeout(bounce);
+        bounce = setTimeout(() => {
+            if (latest !== "ended") {
+                location.replace((latest === "lobby" ? "lobby" : "game") + ".html?room=" + code);
+            }
+        }, 1500);
         return;
     }
+    clearTimeout(bounce);
+    $("#statsbtn").href = "stats.html?room=" + code;
     const list = sorted(room);
     const rev = room.revealed || {};
     setHtml($("#podium"), [["p2", 1], ["p1", 0], ["p3", 2]].filter(([, i]) => list[i]).map(([c, i]) => `<div class="pod ${c}"><h2>${i + 1}</h2><div>${esc(list[i].name)}</div><div>${list[i].score} pts</div></div>`).join(""));

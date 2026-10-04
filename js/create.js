@@ -13,14 +13,24 @@ const parse = () => $("#entries").value.split("\n").map(l => l.trim()).filter(Bo
 
 function count() {
     const n = parse().length;
-    const s = +$("#size").value;
+    const s = +$("#size").dataset.v;
     const c = $("#count");
     c.textContent = `${n} of ${s} entries`;
     c.className = "count " + (n === s ? "ok" : "mute");
 }
 
 $("#entries").oninput = count;
-$("#size").onchange = count;
+$("#size").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b) {
+        return;
+    }
+    $("#size").dataset.v = b.dataset.v;
+    for (const x of $("#size").children) {
+        x.classList.toggle("on", x === b);
+    }
+    count();
+};
 count();
 const params = new URLSearchParams(location.search);
 
@@ -30,7 +40,7 @@ if (params.get("title")) {
 
 $("#save").onclick = async () => {
     const title = $("#title").value.trim();
-    const size = +$("#size").value;
+    const size = +$("#size").dataset.v;
     const items = parse();
     if (!title) {
         return toast("Give your list a title");

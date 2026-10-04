@@ -1266,3 +1266,74 @@ dialog button {
         flex: 1 1 auto;
     }
 }
+/* ───── Stats page ───── */
+.stats h1 { margin-top: 1rem; }
+.stats h2 { margin: 1.6rem 0 .6rem; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.stats .back { margin-bottom: .4rem; }
+.sums { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; margin-top: .8rem; }
+.sum { padding: .8rem 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); text-align: center; animation: rise .5s var(--ease) both; }
+.sum b { display: block; font: 700 1.6rem "Space Grotesk", sans-serif; }
+.sum span { color: var(--mute); font-size: .8rem; }
+.bmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: .5rem; }
+.sq { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; padding: .5rem; border-radius: var(--radius-sm); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--c) 32%, transparent), transparent 80%), var(--panel-solid); animation: rise .45s var(--ease) both; transition: transform .18s var(--ease), border-color .18s; }
+.sq b { font: 700 .95rem "Space Grotesk", sans-serif; }
+.sq small { font-size: .68rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sq.empty { border-style: dashed; border-color: var(--line-strong); background: transparent; color: var(--dim); }
+.sq.empty small { color: var(--dim); }
+.sq:hover { transform: translateY(-3px); border-color: var(--primary); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .7rem; }
+.tiles.one { grid-template-columns: 1fr; margin-top: .7rem; }
+.tile { --a: var(--primary); position: relative; display: flex; flex-direction: column; gap: .25rem; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(150deg, color-mix(in srgb, var(--a) 22%, transparent), transparent 60%), var(--panel); box-shadow: var(--shadow-sm); animation: rise .5s var(--ease) both; transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.tile.gold { --a: var(--gold); } .tile.silver { --a: var(--silver); } .tile.bronze { --a: var(--bronze); } .tile.coral { --a: var(--coral); } .tile.ghost { --a: #666; }
+.tile:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), 0 14px 36px rgba(139, 92, 246, .22); }
+.tile small { color: var(--a); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: .7rem; }
+.tile b { font: 700 1.3rem "Space Grotesk", sans-serif; overflow-wrap: anywhere; }
+.tile b em { color: var(--mute); font-style: normal; font-size: .9rem; }
+.tile span { color: var(--mute); font-size: .84rem; }
+.nf { display: flex; flex-wrap: wrap; gap: .4rem; }
+.nf i { font-style: normal; font-size: .82rem; padding: .25rem .6rem; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--mute); }
+.prows { display: grid; gap: .5rem; }
+.prow { display: grid; grid-template-columns: auto minmax(70px, 130px) 1fr auto; align-items: center; gap: .7rem; padding: .6rem .8rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); transition: border-color .2s, transform .2s var(--ease); }
+.prow:hover { border-color: var(--primary); transform: translateY(-1px); }
+.prow .dot { width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); }
+.prow b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pq { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; }
+.pq i { height: 14px; border-radius: 3px; background: rgba(255, 255, 255, .06); }
+.pq i.on { background: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
+.race svg { width: 100%; height: auto; }
+.race line { stroke: var(--line); }
+.race text { fill: var(--dim); font-size: 10px; }
+.race path { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.6s var(--ease) .3s forwards; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .5rem; font-size: .82rem; color: var(--mute); }
+.legend span { display: inline-flex; align-items: center; gap: .35rem; }
+.legend i { width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); }
+.foot { margin-top: 1.5rem; text-align: center; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (max-width: 560px) { .prow { grid-template-columns: auto 1fr auto; } .pq { grid-column: 1 / -1; order: 5; } }
+
+/* ───── Game: pending + countdown ───── */
+body.pending .screen { visibility: hidden; }
+#gsize { margin-top: .55rem; }
+.cd { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(7, 8, 13, .72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.cd[hidden] { display: none; }
+.cd-stage { position: relative; display: grid; place-items: center; width: min(60vw, 280px); aspect-ratio: 1; }
+.cd-ring { position: absolute; inset: 0; border: 3px solid var(--primary); border-radius: 50%; opacity: 0; box-shadow: 0 0 40px rgba(139, 92, 246, .5); }
+.cd-ring.r2 { border-color: var(--cyan); }
+.cd-num { font: 700 clamp(5rem, 22vw, 9rem) "Space Grotesk", sans-serif; line-height: 1; background: linear-gradient(135deg, #fff, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cd.wait .cd-num { font-size: 2rem; }
+.cd.go .cd-num { background-image: linear-gradient(135deg, var(--cyan), var(--gold)); font-size: clamp(4rem, 18vw, 7rem); }
+.cd-sub { margin-top: 1rem; color: var(--mute); }
+.cd.go .cd-sub, .cd.go .cd-ring.r2 { opacity: 0; }
+.cd.tick .cd-num { animation: cdnum .9s var(--ease) both; }
+.cd.tick:not(.wait) .cd-ring { animation: cdring .95s ease-out both; }
+.cd.tick.go .cd-ring.r2 { animation: cdburst .7s ease-out both; }
+.cd.go { animation: cdout .8s ease-in .0s both; }
+@keyframes cdnum { from { transform: scale(.4); opacity: 0; } 25% { transform: scale(1.08); opacity: 1; } 80% { opacity: 1; } to { transform: scale(1); opacity: .35; } }
+@keyframes cdring { from { transform: scale(1.5); opacity: .9; } to { transform: scale(.7); opacity: 0; } }
+@keyframes cdburst { from { transform: scale(.6); opacity: 1; } to { transform: scale(2); opacity: 0; } }
+@keyframes cdout { 0%, 60% { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+    .cd.tick .cd-num, .cd.tick .cd-ring, .cd.go, .tile, .sq, .sum { animation: none !important; }
+    .race path { animation: none; stroke-dashoffset: 0; }
+}

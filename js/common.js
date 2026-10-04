@@ -1,6 +1,12 @@
 import { db, ref, set, onValue, onDisconnect } from "./firebase.js";
 export const $ = s => document.querySelector(s);
 
+let skew = 0;
+onValue(ref(db, ".info/serverTimeOffset"), s => {
+    skew = s.val() || 0;
+});
+export const now = () => Date.now() + skew;
+
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -68,6 +74,7 @@ export const settle = r => {
     const a = Object.values(r.players).filter(x => x.active).length;
     if (a === 0 || Object.keys(r.revealed || {}).length >= r.size) {
         r.status = "ended";
+        r.endedAt = now();
     }
     return r;
 };

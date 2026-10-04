@@ -1,5 +1,5 @@
 import { db, ref, set, runTransaction, onValue, remove, onDisconnect } from "./firebase.js";
-import { $, esc, code, pid, toast, sorted, presence, sweep, PMODES, pointsFor, hintRules, isWatcher, watchers } from "./common.js";
+import { $, now, esc, code, pid, toast, sorted, presence, sweep, PMODES, pointsFor, hintRules, isWatcher, watchers } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -107,7 +107,8 @@ $("#start").onclick = () => runTransaction(roomRef, r => {
         return;
     }
     r.status = "playing";
-    r.endsAt = Date.now() + (r.duration || 300000);
+    r.startsAt = now() + 4000;
+    r.endsAt = r.startsAt + (r.duration || 300000);
     return r;
 }).then(x => {
     if (x.committed) {

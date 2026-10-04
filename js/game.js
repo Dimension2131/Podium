@@ -1,5 +1,5 @@
 import { db, ref, push, runTransaction, onValue, onChildAdded, query, limitToLast } from "./firebase.js";
-import { $, esc, code, pid, toast, match, settle, sorted, presence, setHtml, patch, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
+import { $, now, esc, code, pid, toast, match, settle, sorted, presence, setHtml, patch, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -25,6 +25,7 @@ const end = () => runTransaction(roomRef, r => {
         return;
     }
     r.status = "ended";
+    r.endedAt = now();
     return r;
 });
 
@@ -39,9 +40,11 @@ onValue(roomRef, s => {
         return;
     }
     if (room.status === "ended") {
-        location.href = "results.html?room=" + code;
+        document.body.classList.add("pending");
+        location.replace("results.html?room=" + code);
         return;
     }
+    document.body.classList.remove("pending");
     if (!live) {
         live = true;
         presence(isWatcher(room));
@@ -76,7 +79,7 @@ function check() {
         return;
     }
     const a = Object.values(room.players).filter(x => x.active).length;
-    if (a === 0 || Object.keys(room.revealed || {}).length >= room.size || Date.now() >= room.endsAt) {
+    if (a === 0 || Object.keys(room.revealed || {}).length >= room.size || now() >= room.endsAt) {
         end();
     }
 }
@@ -85,7 +88,7 @@ setInterval(() => {
     if (!room) {
         return;
     }
-    const left = Math.max(0, (room.endsAt || 0) - Date.now());
+    const left = Math.max(0, (room.endsAt || 0) - Math.max(now(), room.startsAt || 0));
     const m = Math.floor(left / 60000);
     const s = Math.floor(left % 60000 / 1000);
     $("#timer").textContent = `${m}:${String(s).padStart(2, "0")}`;
@@ -121,7 +124,75 @@ function render() {
     $("#giveup").disabled = watcher || spec;
     $("#home").hidden = !(watcher || spec);
     $("#msg").placeholder = watcher ? "Chat with players (no answers)" : spec ? "Chat with other players" : "Type a name to guess it";
+    lockUI();
 }
+
+const locked = () => !!(room && room.startsAt && now() < room.startsAt);
+let wasLocked = null;
+let lastLabel = "";
+
+function lockUI() {
+    const l = locked();
+    $("#msg").disabled = l;
+    $("#send").disabled = l;
+    if (l) {
+        $("#hint").disabled = true;
+        $("#giveup").disabled = true;
+    }
+    if (wasLocked && !l) {
+        wasLocked = l;
+        render();
+        $("#msg").focus();
+    }
+    wasLocked = l;
+}
+
+const buzz = ms => {
+    try {
+        if (navigator.vibrate) {
+            navigator.vibrate(ms);
+        }
+    } catch (e) { }
+};
+
+function countdown() {
+    const box = $("#cd");
+    if (!room || !room.startsAt || room.status !== "playing") {
+        box.hidden = true;
+        return;
+    }
+    const t = room.startsAt - now();
+    if (t <= -800) {
+        box.hidden = true;
+        return;
+    }
+    box.hidden = false;
+    const label = t > 3000 ? "Get ready" : t > 0 ? String(Math.ceil(t / 1000)) : "GO!";
+    if (label === lastLabel) {
+        return;
+    }
+    lastLabel = label;
+    const num = $("#cdnum");
+    num.textContent = label;
+    box.classList.toggle("wait", label === "Get ready");
+    box.classList.toggle("go", label === "GO!");
+    box.classList.remove("tick");
+    void box.offsetWidth;
+    box.classList.add("tick");
+    if (label === "GO!") {
+        buzz(35);
+    } else if (label !== "Get ready") {
+        buzz(15);
+    }
+    lockUI();
+}
+
+setInterval(() => {
+    countdown();
+    if (room && wasLocked) {
+        lockUI();
+    }
+}, 80);
 
 const flat = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -135,6 +206,9 @@ function leaks(text) {
 }
 
 async function send() {
+    if (locked()) {
+        return;
+    }
     const t = $("#msg").value.trim().slice(0, 100);
     $("#msg").value = "";
     if (!t || !room) {
@@ -167,16 +241,18 @@ async function send() {
                 return;
             }
             r.revealed[key] = pid;
+            r.revealedAt = r.revealedAt || {};
+            r.revealedAt[key] = now();
             p.score = (p.score || 0) + pts;
             return settle(r);
-        });
-        if (res.committed) {
+        }).catch(() => null);
+        if (res && res.committed) {
             say({
                 s: 1,
                 t: `${me.name} guessed #${i + 1}: ${room.items[i].n} (+${pts})`
             });
         } else {
-            toast("Someone was faster");
+            toast(res ? "Someone was faster" : "Guess not accepted yet, wait for GO");
         }
         return;
     }
@@ -200,6 +276,9 @@ $("#msg").onkeydown = e => {
 };
 
 $("#hint").onclick = async () => {
+    if (locked()) {
+        return;
+    }
     const me = room.players[pid];
     if (!me || !me.active || (me.hints || 0) >= hintRules(room).max) {
         return;
@@ -241,6 +320,9 @@ $("#hint").onclick = async () => {
 };
 
 $("#giveup").onclick = async () => {
+    if (locked()) {
+        return;
+    }
     if (!confirm("Give up? You will reveal every answer and become a spectator.")) {
         return;
     }
@@ -256,6 +338,7 @@ $("#giveup").onclick = async () => {
             return;
         }
         r.players[pid].active = false;
+        r.players[pid].gaveUpAt = now();
         return settle(r);
     });
     say({

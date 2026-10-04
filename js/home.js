@@ -7,10 +7,6 @@ let seq = 0;
 let tm;
 let busy = false;
 let warned = false;
-let view = null;
-let viewSrc = null;
-let viewLen = -1;
-let viewHid = "";
 $("#name").value = getName();
 
 const hiddenIds = () => {
@@ -22,19 +18,6 @@ const hiddenIds = () => {
     }
 };
 
-function visibleLib(lib) {
-    const hid = hiddenIds();
-    const sig = [...hid].join(",");
-    if (view && viewSrc === lib && viewLen === lib.length && viewHid === sig) {
-        return view;
-    }
-    view = lib.filter(l => !hid.has(l.id));
-    viewSrc = lib;
-    viewLen = lib.length;
-    viewHid = sig;
-    return view;
-}
-
 function hideList(id) {
     const hid = hiddenIds();
     hid.add(id);
@@ -43,6 +26,18 @@ function hideList(id) {
     }
     catch (e) {
         console.warn("Could not remember hidden lists:", e);
+    }
+    search();
+}
+
+function unhideList(id) {
+    const hid = hiddenIds();
+    hid.delete(id);
+    try {
+        localStorage.setItem("podium_hidden", JSON.stringify([...hid]));
+    }
+    catch (e) {
+        console.warn("Could not update hidden lists:", e);
     }
     search();
 }
@@ -221,6 +216,8 @@ $("#clear").onclick = () => {
     search();
 };
 
+let cacheAt = 0;
+
 async function library() {
     if (!cache) {
         const v = (await get(query(ref(db, "lists"), limitToLast(300)))).val() || {};
@@ -228,37 +225,34 @@ async function library() {
             id,
             ...l
         })).sort((a, b) => b.created - a.created);
+        cacheAt = Date.now();
     }
     return cache;
 }
 
-let filled = null;
-const isAI = l => String(l.by).startsWith("AI");
-
-function fillSaved(lib) {
-    if (filled === lib) {
-        return;
+async function getLib() {
+    try {
+        return await library();
     }
-    filled = lib;
-    const opt = l => `<option value="${esc(l.id)}">${esc(l.title)} · top ${l.size}${isAI(l) ? "" : " · " + esc(l.by)}</option>`;
-    const byTitle = (a, b) => a.title.localeCompare(b.title);
-    const ai = lib.filter(isAI).sort(byTitle);
-    const pl = lib.filter(l => !isAI(l)).sort(byTitle);
-    $("#saved").innerHTML = `<option value="">${lib.length ? `Pick a saved list (${lib.length})` : "No saved lists yet"}</option>` + (ai.length ? `<optgroup label="AI generated">${ai.map(opt).join("")}</optgroup>` : "") + (pl.length ? `<optgroup label="Made by players">${pl.map(opt).join("")}</optgroup>` : "");
+    catch (e) {
+        if (!warned) {
+            warned = true;
+            toast(e.code === "PERMISSION_DENIED" ? "The database rules block reading lists. Publish the updated rules." : "Could not load saved lists: " + e.message);
+        }
+        return [];
+    }
 }
 
-$("#saved").onchange = () => {
-    const l = (cache || []).find(x => x.id === $("#saved").value);
-    if (l) {
-        setCustom(l);
-        $("#saved").value = "";
-    }
-};
+const isAI = l => String(l.by).startsWith("AI");
+const stem = w => w.length > 3 ? w.replace(/(es|s)$/, "") : w;
+const words = s => s.toLowerCase().split(/\s+/).filter(Boolean).map(stem);
+const titleHas = (l, ws) => ws.every(w => (l.titleLower || String(l.title).toLowerCase()).includes(w));
+const byOf = l => isAI(l) ? "AI" : l.by;
 
 async function share(c) {
     try {
         const key = c.title.toLowerCase();
-        const lib = await library().catch(() => []);
+        const lib = await getLib();
         const dup = lib.find(l => l.titleLower === key && l.size === c.size);
         if (dup) {
             c.id = dup.id;
@@ -288,7 +282,6 @@ async function share(c) {
                 by: c.by,
                 created
             });
-            filled = null;
         }
     }
     catch (e) {
@@ -296,91 +289,266 @@ async function share(c) {
     }
 }
 
-const stem = w => w.length > 3 ? w.replace(/(es|s)$/, "") : w;
-const hay = l => l.titleLower + " " + (l.items || []).map(i => i.n.toLowerCase()).join(" ");
+let showHid = false;
 
 async function search() {
+    if (busy) {
+        return;
+    }
     const my = ++seq;
     const raw = $("#q").value.trim();
-    const words = raw.toLowerCase().split(/\s+/).filter(Boolean);
-    let lib = [];
-    try {
-        lib = await library();
-    }
-    catch (e) {
-        if (!warned) {
-            warned = true;
-            toast(e.code === "PERMISSION_DENIED" ? "The database rules block reading lists. Publish the updated rules." : "Could not load saved lists: " + e.message);
-        }
-    }
+    const size = +$("#gsize").value;
+    const lib = await getLib();
     if (my !== seq) {
         return;
     }
-    fillSaved(lib);
-    const shown = visibleLib(lib);
-    const hits = shown.filter(l => {
-        const h = hay(l);
-        return words.every(w => h.includes(stem(w)));
-    }).slice(0, 6);
-    let h = hits.map(l => `<li><span>${esc(l.title)} <small>top ${l.size} · ${esc(l.by)}</small></span><span class="acts"><button class="alt" data-id="${l.id}">Use</button> <button class="alt" data-hide="${l.id}" aria-label="Hide this list" title="Hide this list">×</button></span></li>`).join("");
-    if (raw.length >= 3) {
-        h += `<li><span class="mute">${hits.length ? "None of these? " : ""}Generate "${esc(raw)}" with AI</span><span>${[5, 10, 15, 20].map(n => `<button class="alt" data-gen="${n}">Top ${n}</button>`).join(" ")}</span></li>`;
+    $("#browse").textContent = lib.length ? `Browse saved lists (${lib.length})` : "Browse saved lists";
+    const exact = raw.length >= 3 ? lib.find(l => l.titleLower === raw.toLowerCase() && l.size === size) : null;
+    $("#qgo").textContent = exact ? "Use saved list" : "Create";
+    let rows = [];
+    let hidN = 0;
+    if (raw.length >= 2) {
+        const ws = words(raw);
+        const hid = hiddenIds();
+        for (const l of lib) {
+            if (!titleHas(l, ws)) {
+                continue;
+            }
+            const isHid = hid.has(l.id) && l !== exact;
+            if (isHid) {
+                hidN++;
+                if (!showHid) {
+                    continue;
+                }
+            }
+            rows.push([l, isHid]);
+        }
+        rows.sort((a, b) => (b[0] === exact) - (a[0] === exact));
+        rows = rows.slice(0, 3);
     }
-    if (!h) {
-        h = `<li><span class="mute">Type a topic to find a saved list or generate one</span></li>`;
+    const h = rows.length ? [`<li><span class="mute">${exact ? "Already saved with this size:" : "Already saved, check before creating:"}</span></li>`] : [];
+    for (const [l, isHid] of rows) {
+        const side = l === exact ? "" : isHid ? ` <button class="alt" data-unhide="${esc(l.id)}">Unhide</button>` : ` <button class="alt" data-hide="${esc(l.id)}" aria-label="Hide this suggestion" title="Hide this suggestion">×</button>`;
+        h.push(`<li><span>${esc(l.title)} <small>top ${l.size} · ${esc(byOf(l))}</small></span><span class="acts"><button class="alt" data-id="${esc(l.id)}">Use</button>${side}</span></li>`);
     }
-    $("#results").innerHTML = h;
+    if (exact) {
+        h.push(`<li><span class="mute">Want a fresh version anyway?</span><span class="acts"><button class="alt" data-force="1">Create anyway</button></span></li>`);
+    }
+    patch($("#results"), h);
+    $("#hidnote").hidden = !hidN && !showHid;
+    $("#showhid").textContent = showHid ? "Stop showing hidden lists" : `Show hidden (${hidN})`;
 }
 
-$("#results").onclick = async (e) => {
+async function create(force) {
+    if (busy) {
+        return;
+    }
+    const topic = $("#q").value.trim();
+    const size = +$("#gsize").value;
+    if (topic.length < 3) {
+        return toast("Type at least 3 characters for the list title");
+    }
+    const lib = await getLib();
+    if (!force) {
+        const hit = lib.find(l => l.titleLower === topic.toLowerCase() && l.size === size);
+        if (hit) {
+            setCustom(hit);
+            patch($("#results"), []);
+            return;
+        }
+    }
+    busy = true;
+    seq++;
+    $("#qgo").disabled = true;
+    patch($("#results"), [`<li><span class="mute">Asking Gemini for the top ${size}…</span></li>`]);
+    try {
+        const c = await generate(topic, size);
+        setCustom(c);
+        patch($("#results"), []);
+        share(c);
+    }
+    catch (err) {
+        toast(err.message);
+        busy = false;
+        search();
+    }
+    busy = false;
+    $("#qgo").disabled = false;
+}
+
+$("#results").onclick = e => {
     const b = e.target.closest("button");
     if (!b) {
         return;
     }
-    if (b.dataset.gen) {
-        if (busy) {
-            return;
-        }
-        const topic = $("#q").value.trim();
-        const size = +b.dataset.gen;
-        busy = true;
-        seq++;
-        $("#results").innerHTML = `<li><span class="mute">Asking Gemini for the top ${size}…</span></li>`;
-        try {
-            const c = await generate(topic, size);
-            setCustom(c);
-            $("#results").innerHTML = "";
-            share(c);
-        }
-        catch (err) {
-            toast(err.message);
-            search();
-        }
-        busy = false;
-        return;
-    }
-    if (b.dataset.hide) {
+    if (b.dataset.force) {
+        create(true);
+    } else if (b.dataset.hide) {
         hideList(b.dataset.hide);
-        return;
-    }
-    const l = (cache || []).find(x => x.id === b.dataset.id);
-    if (l) {
-        setCustom(l);
-        $("#results").innerHTML = "";
+    } else if (b.dataset.unhide) {
+        unhideList(b.dataset.unhide);
+    } else if (b.dataset.id) {
+        const l = (cache || []).find(x => x.id === b.dataset.id);
+        if (l) {
+            setCustom(l);
+            patch($("#results"), []);
+        }
     }
 };
 
-$("#qgo").onclick = search;
+$("#showhid").onclick = e => {
+    e.preventDefault();
+    showHid = !showHid;
+    search();
+};
+
+$("#qgo").onclick = () => create(false);
 
 $("#q").onkeydown = e => {
     if (e.key === "Enter") {
-        search();
+        e.preventDefault();
     }
 };
 
 $("#q").oninput = () => {
     clearTimeout(tm);
-    tm = setTimeout(search, 300);
+    tm = setTimeout(search, 150);
+};
+
+$("#gsize").onchange = search;
+
+const pk = {
+    q: "",
+    size: "all",
+    src: "all",
+    sort: "new"
+};
+let pkOpen = false;
+
+function pkDraw() {
+    const lib = cache || [];
+    const ws = words(pk.q);
+    const rows = lib.filter(l => (pk.size === "all" || l.size === +pk.size) && (pk.src === "all" || (pk.src === "ai") === isAI(l)) && titleHas(l, ws));
+    rows.sort(pk.sort === "az" ? (a, b) => String(a.title).localeCompare(String(b.title)) : (a, b) => (b.created || 0) - (a.created || 0));
+    const h = rows.map(l => `<li><span>${esc(l.title)} <small>top ${l.size} · ${esc(byOf(l))}</small></span><span class="acts"><button class="alt" data-id="${esc(l.id)}">Use</button></span></li>`);
+    patch($("#pklist"), h.length ? h : [`<li><span class="mute">${lib.length ? "No lists match" : "No saved lists yet"}</span></li>`]);
+    $("#pkcount").textContent = `${rows.length} of ${lib.length} lists${lib.length >= 300 ? " (newest 300 only)" : ""}`;
+    $("#pkclear").hidden = !(pk.q || pk.size !== "all" || pk.src !== "all");
+}
+
+function pkSync() {
+    for (const b of $("#pksize").children) {
+        b.classList.toggle("on", b.dataset.z === pk.size);
+    }
+    for (const b of $("#pksrc").children) {
+        b.classList.toggle("on", b.dataset.s === pk.src);
+    }
+    $("#pkq").value = pk.q;
+    $("#pksort").value = pk.sort;
+}
+
+function pkChange() {
+    pkSync();
+    pkDraw();
+    $("#pklist").scrollTop = 0;
+}
+
+async function openPicker() {
+    if (pkOpen) {
+        return;
+    }
+    pkOpen = true;
+    $("#picker").hidden = false;
+    document.body.style.overflow = "hidden";
+    history.pushState({ pk: 1 }, "");
+    if (cache && Date.now() - cacheAt > 60000) {
+        cache = null;
+    }
+    pkSync();
+    if (!cache) {
+        patch($("#pklist"), [`<li><span class="mute">Loading saved lists…</span></li>`]);
+    }
+    await getLib();
+    if (pkOpen) {
+        pkDraw();
+    }
+}
+
+function hidePicker() {
+    if (!pkOpen) {
+        return;
+    }
+    pkOpen = false;
+    $("#picker").hidden = true;
+    document.body.style.overflow = "";
+}
+
+function closePicker() {
+    if (!pkOpen) {
+        return;
+    }
+    if (history.state && history.state.pk) {
+        history.back();
+    } else {
+        hidePicker();
+    }
+}
+
+window.addEventListener("popstate", hidePicker);
+
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+        closePicker();
+    }
+});
+
+$("#browse").onclick = openPicker;
+$("#pkclose").onclick = closePicker;
+
+$("#pkq").oninput = () => {
+    pk.q = $("#pkq").value.trim();
+    pkDraw();
+    $("#pklist").scrollTop = 0;
+};
+
+$("#pksize").onclick = e => {
+    const b = e.target.closest("button");
+    if (b) {
+        pk.size = b.dataset.z;
+        pkChange();
+    }
+};
+
+$("#pksrc").onclick = e => {
+    const b = e.target.closest("button");
+    if (b) {
+        pk.src = b.dataset.s;
+        pkChange();
+    }
+};
+
+$("#pksort").onchange = () => {
+    pk.sort = $("#pksort").value;
+    pkChange();
+};
+
+$("#pkclear").onclick = () => {
+    pk.q = "";
+    pk.size = "all";
+    pk.src = "all";
+    pkChange();
+};
+
+$("#pklist").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b || !b.dataset.id) {
+        return;
+    }
+    const l = (cache || []).find(x => x.id === b.dataset.id);
+    if (l) {
+        setCustom(l);
+        closePicker();
+    }
 };
 
 showRecent();

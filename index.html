@@ -17,17 +17,20 @@
             <label for="name">Your name</label>
             <input id="name" maxlength="16">
             <div id="finder">
-                <label for="saved">Saved lists</label>
-                <select id="saved">
-                    <option value="">Loading saved lists…</option>
-                </select>
-                <label for="q">Find or generate a list</label>
-                <div class="row"><input id="q" maxlength="40" autocomplete="off"
-                        placeholder="Try: top footballers, best movies, richest people"><button id="qgo"
-                        class="alt">Search</button></div>
+                <button id="browse" class="alt">Browse saved lists</button>
+                <label for="q">Or create a new list with AI</label>
+                <div class="crow"><input id="q" maxlength="40" autocomplete="off"
+                        placeholder="Try: top footballers"><select id="gsize"
+                        aria-label="List size">
+                        <option value="5">Top 5</option>
+                        <option value="10" selected>Top 10</option>
+                        <option value="15">Top 15</option>
+                        <option value="20">Top 20</option>
+                    </select><button id="qgo">Create</button></div>
                 <ul class="plist results" id="results"></ul>
+                <p class="mute" id="hidnote" hidden><a href="#" id="showhid"></a></p>
                 <div id="recent"></div>
-                <p class="mute">If u cant find what u want just make it urself <a href="create.html">Write your own</a>
+                <p class="mute">If u can't find what u want, just make it urself. <a href="create.html">Write your own</a>
                 </p>
             </div>
             <div class="picked" id="picked" hidden>
@@ -71,6 +74,26 @@
             <ul class="plist results" id="pubrooms"></ul>
         </div>
     </main>
+    <div id="picker" class="picker" hidden role="dialog" aria-modal="true" aria-label="Saved lists">
+        <div class="pk">
+            <div class="pkhead"><h2>Saved lists</h2><button id="pkclose" class="alt" aria-label="Close">✕</button></div>
+            <input id="pkq" maxlength="40" autocomplete="off" placeholder="Search list titles">
+            <div class="pkfilters">
+                <div class="seg" id="pksize"><button class="alt on" data-z="all">All sizes</button><button class="alt"
+                        data-z="5">Top 5</button><button class="alt" data-z="10">Top 10</button><button class="alt"
+                        data-z="15">Top 15</button><button class="alt" data-z="20">Top 20</button></div>
+                <div class="seg" id="pksrc"><button class="alt on" data-s="all">All sources</button><button class="alt"
+                        data-s="ai">AI</button><button class="alt" data-s="pl">Players</button></div>
+                <select id="pksort" aria-label="Sort">
+                    <option value="new">Newest first</option>
+                    <option value="az">A to Z</option>
+                </select>
+            </div>
+            <div class="pkmeta"><span class="mute" id="pkcount"></span><button id="pkclear" class="alt"
+                    hidden>Clear filters</button></div>
+            <ul class="plist results pklist" id="pklist"></ul>
+        </div>
+    </div>
     <div id="toast" hidden></div>
     <script type="module" src="js/home.js"></script>
 </body>

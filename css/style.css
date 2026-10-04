@@ -1149,3 +1149,120 @@ dialog button {
     flex: none;
     gap: .4rem;
 }
+
+
+/* ─────────────────────────────────────────
+   CREATE ROW + SAVED LISTS PICKER
+   ───────────────────────────────────────── */
+
+#browse {
+    width: 100%;
+    margin: 1.1rem 0 .4rem;
+}
+
+.crow {
+    display: flex;
+    gap: .5rem;
+    align-items: stretch;
+}
+
+.crow input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.crow select {
+    flex: none;
+    width: 6.4rem;
+    padding-right: .4rem;
+}
+
+.crow button {
+    flex: none;
+    width: auto;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.picker {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    justify-content: center;
+    background: var(--bg);
+}
+
+.pk {
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    width: 100%;
+    max-width: 720px;
+    height: 100%;
+    padding: 1rem;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pkhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.pkhead h2 {
+    margin: 0;
+}
+
+.pkfilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    align-items: center;
+}
+
+.pkfilters .seg {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.pkfilters select {
+    width: auto;
+}
+
+.pkmeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.6rem;
+}
+
+.pklist.results {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 420px) {
+    .crow {
+        flex-wrap: wrap;
+    }
+
+    .crow input {
+        flex: 1 1 100%;
+    }
+
+    .crow select {
+        flex: 1 1 auto;
+    }
+
+    .crow button {
+        flex: 1 1 auto;
+    }
+}

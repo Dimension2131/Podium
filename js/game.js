@@ -95,7 +95,7 @@ setInterval(() => {
 function render() {
     const me = who(room);
     const watcher = !isPlayer(room);
-    const spec = !watcher && !me.active;
+    const spec = watcher || !me.active;
     const rev = room.revealed || {};
     $("#gtitle").textContent = `${room.topic}, top ${room.size}${watcher || spec ? " (spectating)" : ""}`;
     setHtml($("#gscore"), sorted(room).map(p => `<span class="chip${p.active ? "" : " out"}${p.id === pid ? " me" : ""}">${esc(p.name)} ${p.score}</span>`).join(""));
@@ -120,7 +120,18 @@ function render() {
     $("#hint").disabled = watcher || spec || (me.hints || 0) >= hr.max;
     $("#giveup").disabled = watcher || spec;
     $("#home").hidden = !(watcher || spec);
-    $("#msg").placeholder = watcher ? "Chat, or type a name to test a guess (no points)" : spec ? "Chat with other players" : "Type a name to guess it";
+    $("#msg").placeholder = watcher ? "Chat with players (no answers)" : spec ? "Chat with other players" : "Type a name to guess it";
+}
+
+const flat = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+function leaks(text) {
+    const t = " " + flat(text) + " ";
+    const rev = room.revealed || {};
+    return room.items.some((it, i) => !rev["r" + (i + 1)] && [it.n, ...(it.a || [])].some(n => {
+        const m = flat(n);
+        return m.length >= 3 && t.includes(" " + m + " ");
+    }));
 }
 
 async function send() {
@@ -135,14 +146,11 @@ async function send() {
     }
     const i = match(t, room.items);
     if (i >= 0) {
-        if (!isPlayer(room)) {
-            return toast((room.revealed || {})["r" + (i + 1)] ? "Already guessed" : "Correct, but spectators don't score");
-        }
-        if (!me.active) {
-            return toast("Spectators can't reveal answers");
-        }
         if ((room.revealed || {})["r" + (i + 1)]) {
             return toast("Already guessed");
+        }
+        if (!isPlayer(room) || !me.active) {
+            return toast("You can see the answers, so you can't type them in chat");
         }
         const pts = pointsFor(room, i + 1);
         const key = "r" + (i + 1);
@@ -171,6 +179,9 @@ async function send() {
             toast("Someone was faster");
         }
         return;
+    }
+    if ((!isPlayer(room) || !me.active) && leaks(t)) {
+        return toast("You can see the answers, so you can't type them in chat");
     }
     say({
         u: pid,

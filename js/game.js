@@ -119,6 +119,7 @@ function render() {
     $("#hint").textContent = `Hint (${Math.max(0, hr.max - (me.hints || 0))} left${hr.cost ? `, -${hr.cost} pt${hr.cost > 1 ? "s" : ""}` : ", free"})`;
     $("#hint").disabled = watcher || spec || (me.hints || 0) >= hr.max;
     $("#giveup").disabled = watcher || spec;
+    $("#home").hidden = !(watcher || spec);
     $("#msg").placeholder = watcher ? "Chat, or type a name to test a guess (no points)" : spec ? "Chat with other players" : "Type a name to guess it";
 }
 

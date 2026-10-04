@@ -1,5 +1,5 @@
-import { db, ref, get, push, runTransaction, query, limitToLast } from "./firebase.js";
-import { $, esc, toast, pid, getName, setName, buildPoints } from "./common.js";
+import { db, ref, get, set, push, remove, onValue, runTransaction, query, limitToLast } from "./firebase.js";
+import { $, esc, toast, pid, getName, setName, buildPoints, patch } from "./common.js";
 import { generate } from "./ai.js";
 let custom = null;
 let cache = null;
@@ -106,6 +106,7 @@ function setCustom(c) {
     }
 }
 
+let isPublic = true;
 let tsel = "5";
 let pmode = "lin";
 let custVals = null;
@@ -153,6 +154,18 @@ $("#pseg").onclick = e => {
     }
     pmode = b.dataset.p;
     renderSetup();
+};
+
+$("#vseg").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b) {
+        return;
+    }
+    isPublic = b.dataset.v === "pub";
+    for (const x of $("#vseg").children) {
+        x.classList.toggle("on", x === b);
+    }
+    $("#vnote").textContent = isPublic ? "Listed on the home page, anyone can join until the game starts." : "Hidden from the home page. Only people with the room code can join.";
 };
 
 $("#pcustom").oninput = e => {
@@ -443,6 +456,7 @@ $("#create").onclick = async () => {
         n: i.n,
         a: i.a || []
     }));
+    const created = Date.now();
     for (let k = 0; k < 6; k++) {
         const c = gen();
         const r = await runTransaction(ref(db, "rooms/" + c), x => x ? undefined : {
@@ -452,11 +466,27 @@ $("#create").onclick = async () => {
             size,
             items,
             ...cfg,
-            created: Date.now()
+            public: isPublic,
+            created
         });
         if (r.committed) {
             remember(custom);
             await add(c, n);
+            if (isPublic) {
+                try {
+                    await set(ref(db, "publicRooms/" + c), {
+                        topic,
+                        size,
+                        by: n,
+                        n: 1,
+                        created,
+                        ts: Date.now()
+                    });
+                }
+                catch (e) {
+                    console.warn("Could not list the room publicly:", e);
+                }
+            }
             location.href = "lobby.html?room=" + c;
             return;
         }
@@ -486,12 +516,11 @@ async function watch(c, n) {
     return res.committed;
 }
 
-$("#join").onclick = async () => {
+async function joinRoom(c) {
     const n = name();
     if (!n) {
         return;
     }
-    const c = $("#joincode").value.trim().toUpperCase();
     if (c.length !== 4) {
         return toast("Room codes have 4 letters");
     }
@@ -507,7 +536,47 @@ $("#join").onclick = async () => {
         return toast("Room is full");
     }
     location.href = dest(r) + c;
+}
+
+$("#join").onclick = () => joinRoom($("#joincode").value.trim().toUpperCase());
+
+$("#pubrooms").onclick = e => {
+    const b = e.target.closest("button");
+    if (b && b.dataset.j && !b.disabled) {
+        joinRoom(b.dataset.j);
+    }
 };
+
+let pub = {};
+const purged = new Set();
+
+function drawPub() {
+    const now = Date.now();
+    const rows = Object.entries(pub).filter(([k, v]) => {
+        if (!v || !v.topic) {
+            return false;
+        }
+        if (now - v.ts > 600000 && !purged.has(k)) {
+            purged.add(k);
+            remove(ref(db, "publicRooms/" + k)).catch(() => { });
+        }
+        return now - v.ts < 180000;
+    }).sort((a, b) => (b[1].created || 0) - (a[1].created || 0) || (a[0] < b[0] ? -1 : 1)).slice(0, 12);
+    const h = rows.map(([k, v]) => {
+        const full = v.n >= 10;
+        return `<li><span>${esc(v.topic)} <small>top ${v.size} · ${esc(k)} · host ${esc(v.by)} · ${v.n}/10</small></span><span class="acts"><button class="alt" data-j="${esc(k)}"${full ? " disabled" : ""}>${full ? "Full" : "Join"}</button></span></li>`;
+    });
+    patch($("#pubrooms"), h.length ? h : [`<li><span class="mute">No public rooms right now</span></li>`]);
+}
+
+onValue(ref(db, "publicRooms"), s => {
+    pub = s.val() || {};
+    drawPub();
+}, e => {
+    console.warn("Could not read public rooms:", e);
+});
+
+setInterval(drawPub, 15000);
 
 $("#spectate").onclick = async () => {
     const n = name();

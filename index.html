@@ -56,6 +56,10 @@
                         <div><label for="hcost">Cost each (points)</label><input id="hcost" type="number" min="0"
                                 max="999" step="1" value="0"></div>
                     </div>
+                    <label>Room visibility</label>
+                    <div class="seg" id="vseg"><button class="alt on" data-v="pub">Public</button><button class="alt"
+                            data-v="priv">Private</button></div>
+                    <p class="mute" id="vnote">Listed on the home page, anyone can join until the game starts.</p>
                 </div>
             </div>
             <p><button id="create" style="width:100%" disabled>Create room</button></p>
@@ -63,6 +67,8 @@
             <label for="joincode">Or join with a room code</label>
             <div class="row"><input id="joincode" maxlength="4" style="text-transform:uppercase"><button id="join"
                     class="alt">Join</button><button id="spectate" class="alt">Spectate</button></div>
+            <label>Public rooms</label>
+            <ul class="plist results" id="pubrooms"></ul>
         </div>
     </main>
     <div id="toast" hidden></div>

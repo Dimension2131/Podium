@@ -1,4 +1,4 @@
-import { db, ref, runTransaction, onValue, remove, onDisconnect } from "./firebase.js";
+import { db, ref, set, runTransaction, onValue, remove, onDisconnect } from "./firebase.js";
 import { $, esc, code, pid, toast, sorted, presence, sweep, PMODES, pointsFor, hintRules, isWatcher, watchers } from "./common.js";
 
 if (!code) {
@@ -9,6 +9,31 @@ const roomRef = ref(db, "rooms/" + code);
 let live = false;
 let room = null;
 let pres = null;
+const pubRef = ref(db, "publicRooms/" + code);
+let pubKey = "";
+let pubAt = 0;
+
+function publish(list) {
+    if (!room || !room.public || room.host !== pid || room.status !== "lobby") {
+        return;
+    }
+    const by = room.players[room.host] ? room.players[room.host].name : "";
+    const key = list.length + "|" + by;
+    const now = Date.now();
+    if (key === pubKey && now - pubAt < 30000) {
+        return;
+    }
+    pubKey = key;
+    pubAt = now;
+    set(pubRef, {
+        topic: room.topic,
+        size: room.size,
+        by,
+        n: list.length,
+        created: room.created || now,
+        ts: now
+    }).catch(() => { });
+}
 
 const drop = (id, force) => runTransaction(roomRef, r => {
     if (r === null) {
@@ -63,10 +88,16 @@ onValue(roomRef, s => {
     $("#start").hidden = !host;
     $("#start").disabled = list.length < 2;
     $("#lnote").textContent = watching ? "You are spectating. The game opens for you when the host starts it." : list.length < 2 ? `Waiting for players (${list.length}/10). You need at least 2 to start.` : host ? `${list.length}/10 players ready.` : "Waiting for the host to start.";
+    publish(list);
     sweep(room, id => drop(id, false));
 });
 
-setInterval(() => room && sweep(room, id => drop(id, false)), 3000);
+setInterval(() => {
+    if (room && room.players) {
+        publish(sorted(room));
+        sweep(room, id => drop(id, false));
+    }
+}, 3000);
 
 $("#start").onclick = () => runTransaction(roomRef, r => {
     if (r === null) {
@@ -79,7 +110,9 @@ $("#start").onclick = () => runTransaction(roomRef, r => {
     r.endsAt = Date.now() + (r.duration || 300000);
     return r;
 }).then(x => {
-    if (!x.committed) {
+    if (x.committed) {
+        remove(pubRef).catch(() => { });
+    } else {
         toast("Could not start the game");
     }
 });
@@ -92,6 +125,9 @@ $("#leave").onclick = async () => {
         await remove(ref(db, `rooms/${code}/spectators/${pid}`));
         location.href = "index.html";
         return;
+    }
+    if (room && sorted(room).length <= 1) {
+        await remove(pubRef).catch(() => { });
     }
     await drop(pid, true);
     location.href = "index.html";

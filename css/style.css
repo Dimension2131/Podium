@@ -1337,3 +1337,10 @@ body.pending .screen { visibility: hidden; }
     .cd.tick .cd-num, .cd.tick .cd-ring, .cd.go, .tile, .sq, .sum { animation: none !important; }
     .race path { animation: none; stroke-dashoffset: 0; }
 }
+
+/* ───── Random button, urgent timer ───── */
+.brow { display: flex; gap: .5rem; margin: 1.1rem 0 .4rem; }
+.brow #browse { flex: 1; width: auto; margin: 0; }
+#timer.urgent { color: #fff; border-color: #fb7185; background: rgba(251, 113, 133, .2); animation: urgent 1s ease-in-out infinite; }
+@keyframes urgent { 50% { transform: scale(1.12); box-shadow: 0 0 18px rgba(251, 113, 133, .55); } }
+@media (prefers-reduced-motion: reduce) { #timer.urgent { animation: none; } }

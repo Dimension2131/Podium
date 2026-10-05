@@ -1,4 +1,5 @@
 import { db, ref, get, set, push, remove, onValue, runTransaction, query, limitToLast } from "./firebase.js";
+import { TOPICS } from "./topics.js";
 import { $, esc, toast, pid, getName, setName, buildPoints, patch } from "./common.js";
 import { generate } from "./ai.js";
 let custom = null;
@@ -102,6 +103,7 @@ function setCustom(c) {
 }
 
 let isPublic = true;
+let nearOn = true;
 let tsel = "5";
 let pmode = "lin";
 let custVals = null;
@@ -205,9 +207,50 @@ function readSetup() {
         points: pts,
         pmode,
         hintMax: +hm,
-        hintCost: +hc
+        hintCost: +hc,
+        near: nearOn
     };
 }
+
+$("#nseg").onclick = e => {
+    const b = e.target.closest("button");
+    if (!b) {
+        return;
+    }
+    nearOn = b.dataset.n === "1";
+    for (const x of $("#nseg").children) {
+        x.classList.toggle("on", x === b);
+    }
+};
+
+$("#rand").onclick = async () => {
+    if (busy) {
+        return;
+    }
+    const size = +$("#gsize").dataset.v;
+    const lib = await getLib();
+    const used = new Set(lib.filter(l => l.size === size).map(l => l.titleLower));
+    let seen = [];
+    try {
+        seen = JSON.parse(localStorage.getItem("podium_rand") || "[]");
+    }
+    catch (e) { }
+    let pool = TOPICS.filter(t => !used.has(t.toLowerCase()) && !seen.includes(t));
+    if (!pool.length) {
+        seen = [];
+        pool = TOPICS.filter(t => !used.has(t.toLowerCase()));
+    }
+    if (!pool.length) {
+        pool = TOPICS;
+    }
+    const t = pool[Math.random() * pool.length | 0];
+    try {
+        localStorage.setItem("podium_rand", JSON.stringify([...seen, t].slice(-80)));
+    }
+    catch (e) { }
+    $("#q").value = t;
+    search();
+};
 
 $("#clear").onclick = () => {
     setCustom(null);
@@ -729,11 +772,33 @@ $("#pubrooms").onclick = e => {
     const b = e.target.closest("button");
     if (b && b.dataset.j && !b.disabled) {
         joinRoom(b.dataset.j);
+    } else if (b && b.dataset.s) {
+        spectateRoom(b.dataset.s);
     }
 };
 
 let pub = {};
 const purged = new Set();
+const verdict = {};
+const checking = new Set();
+
+async function verify(keys) {
+    await Promise.all(keys.map(async k => {
+        checking.add(k);
+        try {
+            const st = (await get(ref(db, `rooms/${k}/status`))).val();
+            verdict[k] = { ok: st === "lobby", at: Date.now() };
+            if (st !== "lobby") {
+                remove(ref(db, "publicRooms/" + k)).catch(() => { });
+            }
+        }
+        catch (e) {
+            verdict[k] = { ok: true, at: Date.now() };
+        }
+        checking.delete(k);
+    }));
+    drawPub();
+}
 
 function drawPub() {
     const now = Date.now();
@@ -747,9 +812,14 @@ function drawPub() {
         }
         return now - v.ts < 180000;
     }).sort((a, b) => (b[1].created || 0) - (a[1].created || 0) || (a[0] < b[0] ? -1 : 1)).slice(0, 12);
-    const h = rows.map(([k, v]) => {
+    const need = rows.map(([k]) => k).filter(k => !checking.has(k) && (!verdict[k] || Date.now() - verdict[k].at > 20000));
+    if (need.length) {
+        verify(need);
+    }
+    const shown = rows.filter(([k]) => verdict[k] && verdict[k].ok);
+    const h = shown.map(([k, v]) => {
         const full = v.n >= 10;
-        return `<li><span>${esc(v.topic)} <small>top ${v.size} · ${esc(k)} · host ${esc(v.by)} · ${v.n}/10</small></span><span class="acts"><button class="alt" data-j="${esc(k)}"${full ? " disabled" : ""}>${full ? "Full" : "Join"}</button></span></li>`;
+        return `<li><span>${esc(v.topic)} <small>top ${v.size} · ${esc(k)} · host ${esc(v.by)} · ${v.n}/10</small></span><span class="acts"><button class="alt" data-j="${esc(k)}"${full ? " disabled" : ""}>${full ? "Full" : "Join"}</button><button class="alt" data-s="${esc(k)}">Spectate</button></span></li>`;
     });
     patch($("#pubrooms"), h.length ? h : [`<li><span class="mute">No public rooms right now</span></li>`]);
 }
@@ -763,12 +833,11 @@ onValue(ref(db, "publicRooms"), s => {
 
 setInterval(drawPub, 15000);
 
-$("#spectate").onclick = async () => {
+async function spectateRoom(c) {
     const n = name();
     if (!n) {
         return;
     }
-    const c = $("#joincode").value.trim().toUpperCase();
     if (c.length !== 4) {
         return toast("Room codes have 4 letters");
     }
@@ -780,4 +849,6 @@ $("#spectate").onclick = async () => {
         return toast("Too many spectators in that room");
     }
     location.href = dest(r) + c;
-};
+}
+
+$("#spectate").onclick = () => spectateRoom($("#joincode").value.trim().toUpperCase());

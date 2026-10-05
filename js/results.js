@@ -1,4 +1,4 @@
-import { db, ref, onValue } from "./firebase.js";
+import { db, ref, remove, onValue } from "./firebase.js";
 import { $, esc, code, sorted, isPlayer, isWatcher, setHtml, patch } from "./common.js";
 
 if (!code) {
@@ -25,6 +25,7 @@ onValue(ref(db, "rooms/" + code), s => {
         return;
     }
     clearTimeout(bounce);
+    remove(ref(db, "publicRooms/" + code)).catch(() => { });
     $("#statsbtn").href = "stats.html?room=" + code;
     const list = sorted(room);
     const rev = room.revealed || {};

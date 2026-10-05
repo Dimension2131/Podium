@@ -125,6 +125,45 @@ function draw(room, chat) {
         }
     }
 
+    const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+    if (timed) {
+        const byP = {};
+        for (const f of found.filter(f => f.t).sort((a, b) => a.t - b.t)) {
+            (byP[f.by] = byP[f.by] || []).push(f.t);
+        }
+        let best = 0;
+        let bw = [];
+        for (const [id, ts] of Object.entries(byP)) {
+            let run = 1;
+            let mx = 1;
+            for (let i = 1; i < ts.length; i++) {
+                run = ts[i] - ts[i - 1] <= 20000 ? run + 1 : 1;
+                mx = Math.max(mx, run);
+            }
+            if (mx > best) {
+                best = mx;
+                bw = [id];
+            } else if (mx === best) {
+                bw.push(id);
+            }
+        }
+        if (best >= 3) {
+            tile("silver", `Highest streak (x${best})`, names(list.filter(p => bw.includes(p.id))), "finds within 20s of each other");
+        }
+        if (played && list.length >= 3) {
+            const mid = start + played / 2;
+            const sc = list.map(p => found.filter(f => f.by === p.id && f.t && f.t <= mid).reduce((a, f) => a + pointsFor(room, f.r), 0));
+            const fin = list.map(p => p.score);
+            const pos = (v, all) => 1 + all.filter(x => x > v).length;
+            const rows = list.map((p, i) => ({ p, from: pos(sc[i], sc), to: pos(fin[i], fin) }));
+            const climb = Math.max(...rows.map(r => r.from - r.to));
+            if (climb >= 2) {
+                const w = rows.filter(r => r.from - r.to === climb);
+                tile("gold", "Comeback", names(w.map(r => r.p)), `${ord(w[0].from)} at halfway, ${ord(w[0].to)} at the end`);
+            }
+        }
+    }
+
     const ct = {};
     const nm = {};
     for (const m of chat) {

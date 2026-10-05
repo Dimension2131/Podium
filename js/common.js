@@ -70,6 +70,29 @@ export function match(text, items) {
     return -1;
 }
 
+export function near(text, items, rev) {
+    const t = norm(text);
+    if (t.length < 4) {
+        return false;
+    }
+    for (let i = 0; i < items.length; i++) {
+        if (rev["r" + (i + 1)]) {
+            continue;
+        }
+        for (const n of [items[i].n, ...(items[i].a || [])]) {
+            const m = norm(n);
+            if (Math.abs(m.length - t.length) > 2) {
+                continue;
+            }
+            const d = lev(m, t);
+            if (m.length > 5 ? m.length >= 7 && d === 2 : m.length >= 4 && d === 1) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 export const settle = r => {
     const a = Object.values(r.players).filter(x => x.active).length;
     if (a === 0 || Object.keys(r.revealed || {}).length >= r.size) {

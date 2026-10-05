@@ -1,5 +1,5 @@
-import { db, ref, push, runTransaction, onValue, onChildAdded, query, limitToLast } from "./firebase.js";
-import { $, now, esc, code, pid, toast, match, settle, sorted, presence, setHtml, patch, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
+import { db, ref, push, remove, runTransaction, onValue, onChildAdded, query, limitToLast } from "./firebase.js";
+import { $, now, esc, code, pid, toast, match, near, settle, sorted, presence, setHtml, patch, pointsFor, hintRules, isPlayer, isWatcher, me as who } from "./common.js";
 
 if (!code) {
     location.href = "index.html";
@@ -47,6 +47,7 @@ onValue(roomRef, s => {
     document.body.classList.remove("pending");
     if (!live) {
         live = true;
+        remove(ref(db, "publicRooms/" + code)).catch(() => { });
         presence(isWatcher(room));
     }
     render();
@@ -92,6 +93,7 @@ setInterval(() => {
     const m = Math.floor(left / 60000);
     const s = Math.floor(left % 60000 / 1000);
     $("#timer").textContent = `${m}:${String(s).padStart(2, "0")}`;
+    $("#timer").classList.toggle("urgent", left > 0 && left <= 10000 && room.status === "playing");
     check();
 }, 1000);
 
@@ -255,6 +257,9 @@ async function send() {
             toast(res ? "Someone was faster" : "Guess not accepted yet, wait for GO");
         }
         return;
+    }
+    if (isPlayer(room) && me.active && room.near !== false && near(t, room.items, room.revealed || {})) {
+        toast("So close");
     }
     if ((!isPlayer(room) || !me.active) && leaks(t)) {
         return toast("You can see the answers, so you can't type them in chat");

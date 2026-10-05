@@ -17,7 +17,7 @@
             <label for="name">Your name</label>
             <input id="name" maxlength="16">
             <div id="finder">
-                <button id="browse" class="alt">Browse saved lists</button>
+                <div class="brow"><button id="browse" class="alt">Browse saved lists</button><button id="rand" class="alt">Random</button></div>
                 <label for="q">Or create a new list with AI</label>
                 <div class="crow"><input id="q" maxlength="40" autocomplete="off"
                         placeholder="Try: top footballers"><button id="qgo">Create</button></div>
@@ -56,6 +56,10 @@
                         <div><label for="hcost">Cost each (points)</label><input id="hcost" type="number" min="0"
                                 max="999" step="1" value="0"></div>
                     </div>
+                    <label>Near-miss hints</label>
+                    <div class="seg" id="nseg"><button class="alt on" data-n="1">On</button><button class="alt"
+                            data-n="0">Off</button></div>
+                    <p class="mute">Tells a player "So close" when a guess is a couple of letters off an unfound answer.</p>
                     <label>Room visibility</label>
                     <div class="seg" id="vseg"><button class="alt on" data-v="pub">Public</button><button class="alt"
                             data-v="priv">Private</button></div>

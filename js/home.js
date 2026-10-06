@@ -195,10 +195,12 @@ function readSetup() {
     const hm = $("#hmax").value;
     const hc = $("#hcost").value;
     if (!whole(hm, 0, 10)) {
+        $("#adv").open = true;
         toast("Hints per player must be a whole number from 0 to 10");
         return null;
     }
     if (!whole(hc, 0, 999)) {
+        $("#adv").open = true;
         toast("Hint cost must be a whole number from 0 to 999");
         return null;
     }

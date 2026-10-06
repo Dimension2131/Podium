@@ -11,6 +11,46 @@ let room = null;
 let live = false;
 let hintLog = [];
 const hinted = new Set();
+const pageStart = Date.now() - 1000;
+let unread = 0;
+
+const chatOpen = () => document.body.classList.contains("chat-open");
+
+function setChat(open) {
+    document.body.classList.toggle("chat-open", open);
+    $("#chatbtn").setAttribute("aria-expanded", String(open));
+    if (open) {
+        unread = 0;
+        showUnread();
+        const c = $("#chat");
+        c.scrollTop = c.scrollHeight;
+    }
+}
+
+function showUnread() {
+    const u = $("#unread");
+    u.textContent = unread > 9 ? "9+" : String(unread);
+    u.hidden = unread === 0;
+}
+
+$("#chatbtn").onclick = () => setChat(!chatOpen());
+
+// Keep the pinned composer above the on-screen keyboard and report its height to CSS.
+const vv = window.visualViewport;
+function layoutComposer() {
+    const root = document.documentElement.style;
+    const gap = vv ? window.innerHeight - vv.height - vv.offsetTop : 0;
+    const kb = gap > 120 ? gap : 0; // small gaps are browser chrome, not a keyboard
+    root.setProperty("--kb", kb + "px");
+    root.setProperty("--composer-h", $("#composer").offsetHeight + "px");
+}
+if (vv) {
+    vv.addEventListener("resize", layoutComposer);
+    vv.addEventListener("scroll", layoutComposer);
+}
+new ResizeObserver(layoutComposer).observe($("#composer"));
+window.addEventListener("resize", layoutComposer);
+layoutComposer();
 
 const say = o => push(chatRef, {
     ...o,
@@ -73,6 +113,10 @@ onChildAdded(query(chatRef, limitToLast(100)), s => {
     if (stick) {
         c.scrollTop = c.scrollHeight;
     }
+    if (!v.s && v.u !== pid && v.ts > pageStart && !chatOpen() && getComputedStyle($("#chatbtn")).display !== "none") {
+        unread++;
+        showUnread();
+    }
 });
 
 function check() {
@@ -118,6 +162,7 @@ function render() {
         }
     }
     patch($("#grid"), h);
+    fitRows();
     setHtml($("#hints"), hintLog.map(x => `<div>${esc(x)}</div>`).join(""));
     const hr = hintRules(room);
     $("#hint").hidden = hr.max === 0;
@@ -128,6 +173,13 @@ function render() {
     $("#msg").placeholder = watcher ? "Chat with players (no answers)" : spec ? "Chat with other players" : "Type a name to guess it";
     lockUI();
 }
+
+function fitRows() {
+    const g = $("#grid");
+    const cols = getComputedStyle(g).gridTemplateColumns.split(" ").length || 1;
+    g.style.setProperty("--rows", Math.ceil(g.children.length / cols));
+}
+window.addEventListener("resize", fitRows);
 
 const locked = () => !!(room && room.startsAt && now() < room.startsAt);
 let wasLocked = null;

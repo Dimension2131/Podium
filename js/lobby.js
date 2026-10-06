@@ -87,7 +87,7 @@ onValue(roomRef, s => {
     }
     $("#start").hidden = !host;
     $("#start").disabled = list.length < 2;
-    $("#lnote").textContent = watching ? "You are spectating. The game opens for you when the host starts it." : list.length < 2 ? `Waiting for players (${list.length}/10). You need at least 2 to start.` : host ? `${list.length}/10 players ready.` : "Waiting for the host to start.";
+    $("#lnote").textContent = watching ? "You are spectating. The game opens for you when the host starts it." : list.length < 2 ? `${list.length}/10 players. You need at least 2 to start.` : host ? `${list.length}/10 players` : "Waiting for the host to start.";
     publish(list);
     sweep(room, id => drop(id, false));
 });
@@ -132,4 +132,23 @@ $("#leave").onclick = async () => {
     }
     await drop(pid, true);
     location.href = "index.html";
+};
+
+$("#copy").onclick = async () => {
+    try {
+        await navigator.clipboard.writeText(code);
+        toast("Room code copied");
+    } catch (e) {
+        const t = document.createElement("textarea");
+        t.value = code;
+        document.body.append(t);
+        t.select();
+        try {
+            document.execCommand("copy");
+            toast("Room code copied");
+        } catch (e2) {
+            toast("Copy failed, select the code manually");
+        }
+        t.remove();
+    }
 };

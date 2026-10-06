@@ -49,6 +49,13 @@
                             data-p="tier">Tiered</button><button class="alt" data-p="custom">Custom</button></div>
                     <p class="mute" id="ppreview"></p>
                     <div class="pgrid" id="pcustom" hidden></div>
+                    <label>Room visibility</label>
+                    <div class="seg" id="vseg"><button class="alt on" data-v="pub">Public</button><button class="alt"
+                            data-v="priv">Private</button></div>
+                    <p class="mute" id="vnote">Listed on the home page, anyone can join until the game starts.</p>
+                    <details class="adv" id="adv">
+                        <summary>Advanced options</summary>
+                        <div class="adv-body">
                     <label>Hints</label>
                     <div class="fieldrow">
                         <div><label for="hmax">Per player (0 to 10)</label><input id="hmax" type="number" min="0"
@@ -60,10 +67,8 @@
                     <div class="seg" id="nseg"><button class="alt on" data-n="1">On</button><button class="alt"
                             data-n="0">Off</button></div>
                     <p class="mute">Tells a player "So close" when a guess is a couple of letters off an unfound answer.</p>
-                    <label>Room visibility</label>
-                    <div class="seg" id="vseg"><button class="alt on" data-v="pub">Public</button><button class="alt"
-                            data-v="priv">Private</button></div>
-                    <p class="mute" id="vnote">Listed on the home page, anyone can join until the game starts.</p>
+                        </div>
+                    </details>
                 </div>
             </div>
             <p><button id="create" style="width:100%" disabled>Create room</button></p>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <title>Podium · Game</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/png" href="favicon.png">
@@ -16,7 +16,7 @@
     </div>
     <main class="screen game">
         <div class="left">
-            <div>
+            <div class="gtop">
                 <h2 id="gtitle"></h2>
                 <div class="score"><span class="chip" id="timer"></span><span id="gscore" class="score"></span></div>
             </div>
@@ -25,13 +25,16 @@
         </div>
         <div class="right">
             <div class="chat" id="chat"></div>
-            <div class="row"><input id="msg" maxlength="100" autocomplete="off"><button id="send">Send</button></div>
-            <div class="row">
-                <button id="hint" class="alt"></button>
-                <button id="giveup" class="bad">Give up</button>
+            <div class="composer" id="composer">
+                <div class="row"><input id="msg" maxlength="100" autocomplete="off" enterkeyhint="send"><button id="send">Send</button></div>
+                <div class="row">
+                    <button id="chatbtn" class="alt chatbtn" type="button" aria-expanded="false" aria-controls="chat">Chat<span id="unread" class="badge" hidden></span></button>
+                    <button id="hint" class="alt"></button>
+                    <button id="giveup" class="bad">Give up</button>
+                </div>
+                <div class="row"><a id="home" class="btn alt" href="index.html" hidden
+                        style="border-color:var(--line-strong);color:var(--ink)">Back to home</a></div>
             </div>
-            <div class="row"><a id="home" class="btn alt" href="index.html" hidden
-                    style="border-color:var(--line-strong);color:var(--ink)">Back to home</a></div>
         </div>
     </main>
     <div id="toast" hidden></div>
